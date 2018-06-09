@@ -13,8 +13,8 @@ class GP (Framework):
     def __init__(self):
         super(GP, self).__init__()
 
-        self.function_set = {'leg': self.create_arm,
-                             'end': self.create_endpoint,}
+        self.function_set = {'L': self.create_arm,
+                             'E': self.create_endpoint,}
 
         # The ground
         ground = self.world.CreateStaticBody(
@@ -31,29 +31,41 @@ class GP (Framework):
             shape=b2CircleShape(radius=0.25),
             density=1)
 
+        self.create_prototype()
+
+
+    def encode_part(self, prefix, angle, speed, length):
+        return '{}_{:03d}_{:03d}_{:03d}'.format(prefix, angle, speed, length)
+
+
+    def decode_part(self, str):
+        split = str.split('_')
+        return self.function_set[split[0]], int(split[1]), int(split[2]), int(split[3])
+
 
     def create_root(self):
         body = self.world.CreateDynamicBody(
             position=self.offset,
             fixtures=b2FixtureDef(
-                shape=b2CircleShape(radius=1),
+                shape=b2CircleShape(radius=0.1),
                 density=1),
         )
 
         # define joints
         anchors = []
         anchors.append(self.offset)
+        anchors.append(self.offset)
 
-        return body, anchors
+        return body, anchors, 'R'
 
 
-    def create_arm(self, anchor, connected, angle=0, speed=0, length=2):
+    def create_arm(self, anchor, connected, angle=0, speed=2, length=4):
 
         #define body
         p1 = b2Vec2(0, -1)
         p2 = b2Vec2(-1, 0)
         p3 = b2Vec2(-1, length)
-        p4 = b2Vec2(0, length+2)
+        p4 = b2Vec2(0, length+1)
         p5 = b2Vec2(1, length)
         p6 = b2Vec2(1, 0)
 
@@ -61,7 +73,7 @@ class GP (Framework):
 
         body = self.world.CreateDynamicBody(
             position=anchor,
-            angle=angle,
+            angle=angle * b2_pi / 180,
             angularDamping=10,
             fixtures=b2FixtureDef(
                 shape=poly,
@@ -82,10 +94,10 @@ class GP (Framework):
             maxMotorTorque=1000,
             enableMotor=self.motorOn)
 
-        return body, anchors
+        return body, anchors, self.encode_part('L', angle, speed, length)
 
 
-    def create_endpoint(self, anchor, connected, angle=0, speed=0, length=2):
+    def create_endpoint(self, anchor, connected, angle=0, speed=2, length=2):
         # define body
         p1 = b2Vec2(0, -1)
         p2 = b2Vec2(-1, 0)
@@ -98,7 +110,7 @@ class GP (Framework):
 
         body = self.world.CreateDynamicBody(
             position=anchor,
-            angle=angle,
+            angle=angle * b2_pi / 180,
             angularDamping=10,
             fixtures=b2FixtureDef(
                 shape=poly,
@@ -118,24 +130,31 @@ class GP (Framework):
             maxMotorTorque=1000,
             enableMotor=self.motorOn)
 
-        return body, anchors
+        return body, anchors, self.encode_part('E', angle, speed, length)
 
 
     def create_prototype(self):
         root = self.create_root()
         openlist = [root]
-        graph = {}
+        partlist = [root[0]]
+        graph = {root[2]: []}
 
         while len(openlist) > 0:
-            body, anchors = openlist.pop()
-            connected = []
+            body, anchors, enc = openlist.pop()
+            graph[enc] = []
+
             for anchor in anchors:
+                # choose random part
                 name, func = random.choice(list(self.function_set.items()))
-                part = func()
-                connected.append()
+                # create part and anchors
+                part = func(anchor, body)
+                #
+                openlist.append(part)
+                graph[enc].append(part[2])
+                partlist.append(part[0])
 
+        return partlist, graph
 
-
-
+[]
 if __name__ == "__main__":
     main(GP)
