@@ -2,6 +2,7 @@ from examples.framework import (Framework, Keys, main)
 from Box2D import (b2CircleShape, b2EdgeShape, b2FixtureDef, b2PolygonShape,
                    b2Vec2, b2_pi)
 import random
+import numpy as np
 
 
 class GP (Framework):
@@ -23,13 +24,26 @@ class GP (Framework):
             ]
         )
 
+        obstacle_count = 400
+
+        # Pre-defned obstacle types
         box = b2FixtureDef(
-            shape=b2PolygonShape(box=(0.5, 0.5)),
+            shape=b2PolygonShape(box=(0.6, 0.6)),
             density=1,
             friction=0.3)
         circle = b2FixtureDef(
-            shape=b2CircleShape(radius=0.25),
+            shape=b2CircleShape(radius=0.2),
             density=1)
+        triangle = b2FixtureDef(
+            shape=b2PolygonShape(vertices=[(0,0),(1,1),(0,1)]),
+            density=1)
+
+        # Randomly generated obstacle shapes and distances
+        obstacles = [box, circle, triangle]
+        for i in range(obstacle_count):
+            obstacle = self.world.CreateDynamicBody(
+                fixtures=obstacles[np.int(np.random.choice(3, 1).squeeze())],
+                position=(-40 + np.int(np.random.choice(40, 1).squeeze()) * i, 0.5))
 
         self.create_prototype()
 
