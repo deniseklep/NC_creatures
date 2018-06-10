@@ -52,7 +52,7 @@ class GP (Framework):
         # Randomly generated obstacle shapes and distances
         obstacles = [box, circle, triangle]
         for i in range(obstacle_count):
-            obstacle = self.world.CreateDynamicBody(
+            obstacle = self.world.CreateStaticBody(
                 fixtures=random.choice(obstacles),
                 position=(-40 + np.int(np.random.choice(40, 1).squeeze()) * i, 0.5))
 
@@ -221,7 +221,7 @@ class GP (Framework):
                 openlist.append(part)
                 graph[enc].append(part[2])
                 partlist.append(part[0])
-                
+
         return Creature(partlist, graph, self.generation)
 
 
