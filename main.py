@@ -17,6 +17,8 @@ class GP (Framework):
         self.function_set = {'L': self.create_arm,
                              'E': self.create_endpoint,}
 
+        self.actors = []
+
         # The ground
         ground = self.world.CreateStaticBody(
             shapes=[
@@ -26,7 +28,7 @@ class GP (Framework):
 
         obstacle_count = 400
 
-        # Pre-defned obstacle types
+        # Pre-defined obstacle types
         box = b2FixtureDef(
             shape=b2PolygonShape(box=(0.6, 0.6)),
             density=1,
@@ -42,10 +44,18 @@ class GP (Framework):
         obstacles = [box, circle, triangle]
         for i in range(obstacle_count):
             obstacle = self.world.CreateDynamicBody(
-                fixtures=obstacles[np.int(np.random.choice(3, 1).squeeze())],
+                fixtures=random.choice(obstacles),
                 position=(-40 + np.int(np.random.choice(40, 1).squeeze()) * i, 0.5))
 
-        self.create_prototype()
+        self.actors.append(self.create_prototype())
+
+
+    # Executed at every simulation step, put GP logic here:
+    def Step(self, settings):
+        super(GP, self).Step(settings)
+
+        for actor in self.actors:
+            actor.update(1.0 / settings.hz)
 
 
     def encode_part(self, prefix, angle, speed, length):
@@ -167,8 +177,26 @@ class GP (Framework):
                 graph[enc].append(part[2])
                 partlist.append(part[0])
 
-        return partlist, graph
+        return Creature(partlist, graph)
 
-[]
+
+class Creature:
+
+    def __init__(self, body, graph, generation):
+        self.body = body
+        self.graph = graph
+        self.time_alive = 0
+        self.generation = generation
+
+    def get_fitness(self):
+        # return x coordinate of root as fitness value
+        return self.body[0].position.x
+
+    def update(self, timestep):
+        self.time_alive += timestep
+        # do this every simulation step (such as checking and updating time_alive)
+        pass
+
+
 if __name__ == "__main__":
     main(GP)
