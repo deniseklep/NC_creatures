@@ -177,7 +177,7 @@ class GP (Framework):
                 graph[enc].append(part[2])
                 partlist.append(part[0])
 
-        return Creature(partlist, graph)
+        return Creature(partlist, graph, 0)
 
 
 class Creature:
