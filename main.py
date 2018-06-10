@@ -74,9 +74,10 @@ class GP (Framework):
             self.simulation_time = 0
             self.generation += 1
             best_creatures = self.select_best_creatures(self.creatures)
-            new_population = self.evolve_creatures(best_creatures, self.population_size)
+            best_graphs = [creature.graph for creature in best_creatures]
+            new_graphs = self.evolve_creatures(best_graphs, self.population_size)
+            new_population = [self.creature_from_graph(graph) for graph in new_graphs]
             # TODO: delete old creatures
-
             self.creatures = new_population
 
             print('Best fitness: {}'.format(self.best_fitness))
@@ -84,12 +85,21 @@ class GP (Framework):
 
     def select_best_creatures(self, creatures, n=2):
         # TODO: randomly select n best creatures based on fitness
+
         return creatures
 
 
-    def evolve_creatures(self, creatures, n=10):
-        # TODO: create n new creatures by random mutation and crossover
-        return creatures
+    def evolve_creatures(self, graphs, n=10):
+        # TODO: create n new creatures by random mutation and crossover of the graphs
+
+        return graphs
+
+
+    def creature_from_graph(self, graph):
+        # TODO: create new creature parts from graph
+
+        partlist = []
+        return Creature(partlist, graph, self.generation)
 
 
     def encode_part(self, prefix, angle, speed, length):
