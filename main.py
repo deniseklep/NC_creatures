@@ -11,13 +11,22 @@ class GP (Framework):
     offset = b2Vec2(0, 8)
     motorOn = True
 
+    # Evolution parameters:
+    max_simulation_time = 30.
+    population_size = 20
+    terminal_set = ['E']
+    function_set = ['L']
+
     def __init__(self):
         super(GP, self).__init__()
 
-        self.function_set = {'L': self.create_arm,
-                             'E': self.create_endpoint,}
+        self.primitive_set = {'L': self.create_arm,
+                         'E': self.create_endpoint}
 
-        self.actors = []
+        self.creatures = []
+        self.simulation_time = 0
+        self.generation = 0
+        self.best_fitness = 0
 
         # The ground
         ground = self.world.CreateStaticBody(
@@ -47,15 +56,40 @@ class GP (Framework):
                 fixtures=random.choice(obstacles),
                 position=(-40 + np.int(np.random.choice(40, 1).squeeze()) * i, 0.5))
 
-        self.actors.append(self.create_prototype())
+        # Create initial population
+        for i in range(self.population_size):
+            self.creatures.append(self.create_prototype())
 
-
-    # Executed at every simulation step, put GP logic here:
     def Step(self, settings):
         super(GP, self).Step(settings)
 
-        for actor in self.actors:
-            actor.update(1.0 / settings.hz)
+        # Executed at every simulation step, put GP logic here:
+        self.simulation_time += 1.0 / settings.hz
+        if self.simulation_time < self.max_simulation_time:
+            # Update all creatures
+            for creature in self.creatures:
+                creature.update(1.0 / settings.hz)
+        else:
+            # Create new generation
+            self.simulation_time = 0
+            self.generation += 1
+            best_creatures = self.select_best_creatures(self.creatures)
+            new_population = self.evolve_creatures(best_creatures, self.population_size)
+            # TODO: delete old creatures
+
+            self.creatures = new_population
+
+            print('Best fitness: {}'.format(self.best_fitness))
+
+
+    def select_best_creatures(self, creatures, n=2):
+        # TODO: randomly select n best creatures based on fitness
+        return creatures
+
+
+    def evolve_creatures(self, creatures, n=10):
+        # TODO: create n new creatures by random mutation and crossover
+        return creatures
 
 
     def encode_part(self, prefix, angle, speed, length):
@@ -72,6 +106,7 @@ class GP (Framework):
             position=self.offset,
             fixtures=b2FixtureDef(
                 shape=b2CircleShape(radius=0.1),
+                groupIndex=-1,
                 density=1),
         )
 
@@ -169,7 +204,7 @@ class GP (Framework):
 
             for anchor in anchors:
                 # choose random part
-                name, func = random.choice(list(self.function_set.items()))
+                name, func = random.choice(list(self.primitive_set.items()))
                 # create part and anchors
                 part = func(anchor, body)
                 #
@@ -177,7 +212,7 @@ class GP (Framework):
                 graph[enc].append(part[2])
                 partlist.append(part[0])
 
-        return Creature(partlist, graph, 0)
+        return Creature(partlist, graph, self.generation)
 
 
 class Creature:
@@ -185,7 +220,7 @@ class Creature:
     def __init__(self, body, graph, generation):
         self.body = body
         self.graph = graph
-        self.time_alive = 0
+        self.time_alive = 0  # time in seconds
         self.generation = generation
 
     def get_fitness(self):
