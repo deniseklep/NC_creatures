@@ -30,14 +30,14 @@ class GP (Framework):
 
         # Pre-defined obstacle types
         box = b2FixtureDef(
-            shape=b2PolygonShape(box=(0.6, 0.6)),
+            shape=b2PolygonShape(box=(0.6, 0.6)), #large
             density=1,
             friction=0.3)
         circle = b2FixtureDef(
-            shape=b2CircleShape(radius=0.2),
+            shape=b2CircleShape(radius=0.2), #small
             density=1)
         triangle = b2FixtureDef(
-            shape=b2PolygonShape(vertices=[(0,0),(1,1),(0,1)]),
+            shape=b2PolygonShape(vertices=[(0,0),(1,1),(0,1)]), #middle
             density=1)
 
         # Randomly generated obstacle shapes and distances
@@ -177,7 +177,7 @@ class GP (Framework):
                 graph[enc].append(part[2])
                 partlist.append(part[0])
 
-        return Creature(partlist, graph)
+        return Creature(partlist, graph, 1)
 
 
 class Creature:
