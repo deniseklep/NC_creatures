@@ -21,7 +21,7 @@ class GP (Framework):
         super(GP, self).__init__()
 
         self.primitive_set = {'L': self.create_arm,
-                         'E': self.create_endpoint}
+                              'E': self.create_endpoint,}
 
         self.creatures = []
         self.simulation_time = 0
@@ -97,18 +97,18 @@ class GP (Framework):
 
     def creature_from_graph(self, graph):
         # TODO: create new creature parts from graph
-
         partlist = []
+
         return Creature(partlist, graph, self.generation)
 
 
-    def encode_part(self, prefix, angle, speed, length):
-        return '{}_{:03d}_{:03d}_{:03d}'.format(prefix, angle, speed, length)
+    def encode_part(self, prefix, angle, speed, length, graph_code):
+        return '{}_{:03d}_{:03d}_{:03d}_{}'.format(prefix, angle, speed, length, graph_code)
 
 
     def decode_part(self, str):
         split = str.split('_')
-        return self.function_set[split[0]], int(split[1]), int(split[2]), int(split[3])
+        return self.primitive_set[split[0]], int(split[1]), int(split[2]), int(split[3]), split[4]
 
 
     def create_root(self):
@@ -123,12 +123,11 @@ class GP (Framework):
         # define joints
         anchors = []
         anchors.append(self.offset)
-        anchors.append(self.offset)
 
-        return body, anchors, 'R'
+        return body, anchors, 'R_0'
 
 
-    def create_arm(self, anchor, connected, angle=0, speed=2, length=4):
+    def create_arm(self, anchor, connected, graph_code, angle=45, speed=2, length=4):
 
         #define body
         p1 = b2Vec2(0, -1)
@@ -163,10 +162,10 @@ class GP (Framework):
             maxMotorTorque=1000,
             enableMotor=self.motorOn)
 
-        return body, anchors, self.encode_part('L', angle, speed, length)
+        return body, anchors, self.encode_part('L', angle, speed, length, graph_code)
 
 
-    def create_endpoint(self, anchor, connected, angle=0, speed=2, length=2):
+    def create_endpoint(self, anchor, connected, graph_code, angle=0, speed=2, length=2):
         # define body
         p1 = b2Vec2(0, -1)
         p2 = b2Vec2(-1, 0)
@@ -199,7 +198,7 @@ class GP (Framework):
             maxMotorTorque=1000,
             enableMotor=self.motorOn)
 
-        return body, anchors, self.encode_part('E', angle, speed, length)
+        return body, anchors, self.encode_part('E', angle, speed, length, graph_code)
 
 
     def create_prototype(self):
@@ -210,17 +209,20 @@ class GP (Framework):
 
         while len(openlist) > 0:
             body, anchors, enc = openlist.pop()
+            graph_code = enc.split('_')[-1]
             graph[enc] = []
 
-            for anchor in anchors:
+            for i, anchor in enumerate(anchors):
                 # choose random part
                 name, func = random.choice(list(self.primitive_set.items()))
                 # create part and anchors
-                part = func(anchor, body)
-                #
-                openlist.append(part)
+                part = func(anchor, body, graph_code+str(i))
+                # add unique graph string to encoding
+                if len(part[1]) > 0:
+                    openlist.append(part)
                 graph[enc].append(part[2])
                 partlist.append(part[0])
+        print(graph)
 
         return Creature(partlist, graph, self.generation)
 
