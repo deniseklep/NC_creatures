@@ -3,6 +3,7 @@ from Box2D import (b2CircleShape, b2EdgeShape, b2FixtureDef, b2PolygonShape,
                    b2Vec2, b2_pi)
 import random
 import numpy as np
+from random import shuffle
 
 
 class GP (Framework):
@@ -60,6 +61,7 @@ class GP (Framework):
         for i in range(self.population_size):
             self.creatures.append(self.create_prototype())
 
+
     def Step(self, settings):
         super(GP, self).Step(settings)
 
@@ -84,9 +86,20 @@ class GP (Framework):
 
 
     def select_best_creatures(self, creatures, n=2):
-        # TODO: randomly select n best creatures based on fitness
-
-        return creatures
+        # Randomly select n best creatures based on fitness
+        best_creatures = []
+        max = sum([creature.get_fitness() for creature in creatures])
+        while len(best_creatures) < n:
+            select = random.uniform(0,max)
+            current = 0
+            for creature in creatures:
+                current += creature.get_fitness()
+                if current > select:
+                    best_creatures.append(creature)
+        shuffle(best_creatures)
+        delete = len(best_creatures)-n
+        del best_creatures[-delete:]
+        return best_creatures
 
 
     def evolve_creatures(self, graphs, n=10):
