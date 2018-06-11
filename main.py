@@ -89,8 +89,17 @@ class GP (Framework):
         return creatures
 
 
-    def evolve_creatures(self, graphs, n=10):
+    def evolve_creatures(self, graphs, n=10, p_mut_part = 0.2, p_mut_param = 0.4, p_crossover = 0.2):
         # TODO: create n new creatures by random mutation and crossover of the graphs
+        for g in graphs:
+            if np.random.random() < p_mut_part:
+
+                pass
+            elif np.random.random() < p_mut_param:
+                pass
+            elif np.random.random() < p_crossover:
+                pass
+
 
         return graphs
 
@@ -103,6 +112,7 @@ class GP (Framework):
 
 
     def encode_part(self, prefix, angle, speed, length):
+        #print('{}_{:03d}_{:03d}_{:03d}'.format(prefix, angle, speed, length))
         return '{}_{:03d}_{:03d}_{:03d}'.format(prefix, angle, speed, length)
 
 
@@ -221,7 +231,7 @@ class GP (Framework):
                 openlist.append(part)
                 graph[enc].append(part[2])
                 partlist.append(part[0])
-
+        print(graph)
         return Creature(partlist, graph, self.generation)
 
 
