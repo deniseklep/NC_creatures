@@ -110,30 +110,28 @@ class GP (Framework):
         return best_creatures
 
 
-    def find_child(self, g, tbmut):
-        tbdel = []
-        print('to be mutated: ' + tbmut)
-        if 'E' in g[tbmut]:
-            return tbdel
-        else:
-            tbdel.append(tbmut)
-            for m in g[tbmut]:
-                self.find_child(g, g[m])
+    def find_child(self, g, tbmut, tbdel):
+        print('to be mutated: {}'.format(tbmut))
+        tbdel.append(tbmut)
+        for m in g[tbmut]:
+            if 'E' in m:
+                pass
+            else:
+                self.find_child(g, g[m], tbdel)
 
 
     def evolve_creatures(self, graphs, n=10, p_mut_part = 1.0, p_mut_param = 0.4, p_crossover = 0.2):
         # TODO: create n new creatures by random mutation and crossover of the graphs
         for g in graphs:
             if np.random.random() < p_mut_part:
+                print('graph: {}'.format(g))
                 print(g.keys())
-                tbmut = np.random.choice(list(g.keys()),1)
-                while 'R' in tbmut:
-                    tbmut = np.random.choice(list(g.keys()),1)
-                    if 'R' not in tbmut:
-                        break
-                tbdel = self.find_child(g, tbmut.squeeze())
+                tbmut = random.choice(list(g.keys()))
+                tbdel = self.find_child(g, tbmut, [])
+                print('to be deleted: {}'.format(tbdel))
                 for i in tbdel:
-                   del(g[i])
+                    del(g[i])
+
 
             elif np.random.random() < p_mut_param:
                 pass
