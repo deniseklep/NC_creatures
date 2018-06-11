@@ -3,6 +3,7 @@ from Box2D import (b2CircleShape, b2EdgeShape, b2FixtureDef, b2PolygonShape,
                    b2Vec2, b2_pi)
 import random
 import numpy as np
+from random import shuffle
 
 
 class GP (Framework):
@@ -21,7 +22,7 @@ class GP (Framework):
         super(GP, self).__init__()
 
         self.primitive_set = {'L': self.create_arm,
-                         'E': self.create_endpoint}
+                              'E': self.create_endpoint,}
 
         self.creatures = []
         self.simulation_time = 0
@@ -60,6 +61,7 @@ class GP (Framework):
         for i in range(self.population_size):
             self.creatures.append(self.create_prototype())
 
+
     def Step(self, settings):
         super(GP, self).Step(settings)
 
@@ -84,17 +86,47 @@ class GP (Framework):
 
 
     def select_best_creatures(self, creatures, n=2):
-        # TODO: randomly select n best creatures based on fitness
+        # Randomly select n best creatures based on fitness
+        best_creatures = []
+        max = sum([creature.get_fitness() for creature in creatures])
+        while len(best_creatures) < n:
+            select = random.uniform(0,max)
+            current = 0
+            for creature in creatures:
+                current += creature.get_fitness()
+                if current > select:
+                    best_creatures.append(creature)
+        shuffle(best_creatures)
+        delete = len(best_creatures)-n
+        del best_creatures[-delete:]
+        return best_creatures
 
-        return creatures
+
+    def find_child(self, g, tbmut):
+        tbdel = []
+        print('to be mutated: ' + tbmut)
+        if 'E' in g[tbmut]:
+            return tbdel
+        else:
+            tbdel.append(tbmut)
+            for m in g[tbmut]:
+                self.find_child(g, g[m])
 
 
-    def evolve_creatures(self, graphs, n=10, p_mut_part = 0.2, p_mut_param = 0.4, p_crossover = 0.2):
+    def evolve_creatures(self, graphs, n=10, p_mut_part = 1.0, p_mut_param = 0.4, p_crossover = 0.2):
         # TODO: create n new creatures by random mutation and crossover of the graphs
         for g in graphs:
             if np.random.random() < p_mut_part:
+                print(g.keys())
+                tbmut = np.random.choice(list(g.keys()),1)
+                while 'R' in tbmut:
+                    tbmut = np.random.choice(list(g.keys()),1)
+                    if 'R' not in tbmut:
+                        break
+                tbdel = self.find_child(g, tbmut.squeeze())
+                for i in tbdel:
+                   del(g[i])
 
-                pass
             elif np.random.random() < p_mut_param:
                 pass
             elif np.random.random() < p_crossover:
@@ -106,19 +138,19 @@ class GP (Framework):
 
     def creature_from_graph(self, graph):
         # TODO: create new creature parts from graph
-
         partlist = []
+
         return Creature(partlist, graph, self.generation)
 
 
-    def encode_part(self, prefix, angle, speed, length):
-        #print('{}_{:03d}_{:03d}_{:03d}'.format(prefix, angle, speed, length))
-        return '{}_{:03d}_{:03d}_{:03d}'.format(prefix, angle, speed, length)
+    def encode_part(self, prefix, angle, speed, length, graph_code):
+        return '{}_{:03d}_{:03d}_{:03d}_{}'.format(prefix, angle, speed, length, graph_code)
+
 
 
     def decode_part(self, str):
         split = str.split('_')
-        return self.function_set[split[0]], int(split[1]), int(split[2]), int(split[3])
+        return self.primitive_set[split[0]], int(split[1]), int(split[2]), int(split[3]), split[4]
 
 
     def create_root(self):
@@ -133,12 +165,11 @@ class GP (Framework):
         # define joints
         anchors = []
         anchors.append(self.offset)
-        anchors.append(self.offset)
 
-        return body, anchors, 'R'
+        return body, anchors, 'R_0'
 
 
-    def create_arm(self, anchor, connected, angle=0, speed=2, length=4):
+    def create_arm(self, anchor, connected, graph_code, angle=45, speed=2, length=4):
 
         #define body
         p1 = b2Vec2(0, -1)
@@ -161,8 +192,10 @@ class GP (Framework):
         )
 
         #define joints
+        rad = (angle+90) * b2_pi / 180
+        a1 = b2Vec2(anchor.x+np.cos(rad)*length, anchor.y+np.sin(rad)*length)
         anchors = []
-        anchors.append(b2Vec2(anchor.x, anchor.y+length))
+        anchors.append(a1)
 
         motorJoint = self.world.CreateRevoluteJoint(
             bodyA=body,
@@ -173,10 +206,10 @@ class GP (Framework):
             maxMotorTorque=1000,
             enableMotor=self.motorOn)
 
-        return body, anchors, self.encode_part('L', angle, speed, length)
+        return body, anchors, self.encode_part('L', angle, speed, length, graph_code)
 
 
-    def create_endpoint(self, anchor, connected, angle=0, speed=2, length=2):
+    def create_endpoint(self, anchor, connected, graph_code, angle=0, speed=2, length=2):
         # define body
         p1 = b2Vec2(0, -1)
         p2 = b2Vec2(-1, 0)
@@ -209,7 +242,7 @@ class GP (Framework):
             maxMotorTorque=1000,
             enableMotor=self.motorOn)
 
-        return body, anchors, self.encode_part('E', angle, speed, length)
+        return body, anchors, self.encode_part('E', angle, speed, length, graph_code)
 
 
     def create_prototype(self):
@@ -220,15 +253,17 @@ class GP (Framework):
 
         while len(openlist) > 0:
             body, anchors, enc = openlist.pop()
+            graph_code = enc.split('_')[-1]
             graph[enc] = []
 
-            for anchor in anchors:
+            for i, anchor in enumerate(anchors):
                 # choose random part
                 name, func = random.choice(list(self.primitive_set.items()))
                 # create part and anchors
-                part = func(anchor, body)
-                #
-                openlist.append(part)
+                part = func(anchor, body, graph_code+str(i))
+                # add unique graph string to encoding
+                if len(part[1]) > 0:
+                    openlist.append(part)
                 graph[enc].append(part[2])
                 partlist.append(part[0])
         print(graph)
