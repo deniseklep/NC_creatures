@@ -85,10 +85,10 @@ class GP (Framework):
             self.generation += 1
             best_creatures = self.select_best_creatures(self.creatures)
             best_graphs = [creature.graph for creature in best_creatures]
-            #new_graphs = self.evolve_creatures(best_graphs, self.population_size)
-            #new_population = [self.creature_from_graph(graph) for graph in new_graphs]
-            # TODO: delete old creatures
-            #self.creatures = new_population
+            new_graphs = self.evolve_creatures(best_graphs, self.population_size)
+            new_population = [self.creature_from_graph(graph) for graph in new_graphs]
+            self.destroy_creatures(self.creatures)
+            self.creatures = new_population
 
             print('Best fitness: {}'.format(self.best_fitness))
 
@@ -118,9 +118,35 @@ class GP (Framework):
 
     def creature_from_graph(self, graph):
         # TODO: create new creature parts from graph
-        partlist = [self.create_root()[0]]
+        root = self.create_root()
+        openlist = [root]
+        partlist = [root[0]]
+
+        while len(openlist) > 0:
+            body, anchors, enc = openlist.pop()
+
+            for i, anchor in enumerate(anchors):
+                next_enc = graph[enc][i]
+                func, angle, speed, length, graph_code = self.decode_part(next_enc)
+                # create part and anchors
+                part = func(anchor,
+                            body,
+                            graph_code,
+                            angle=angle,
+                            speed=speed,
+                            length=length)
+                # add unique graph string to encoding
+                if len(part[1]) > 0:
+                    openlist.append(part)
+                partlist.append(part[0])
 
         return Creature(partlist, graph, self.generation)
+
+
+    def destroy_creatures(self, creatures):
+        for creature in creatures:
+            for body in creature.body:
+                self.world.DestroyBody(body)
 
 
     def encode_part(self, prefix, angle, speed, length, graph_code):
