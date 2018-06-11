@@ -163,8 +163,10 @@ class GP (Framework):
         )
 
         #define joints
+        rad = (angle+90) * b2_pi / 180
+        a1 = b2Vec2(anchor.x+np.cos(rad)*length, anchor.y+np.sin(rad)*length)
         anchors = []
-        anchors.append(b2Vec2(anchor.x, anchor.y+length))
+        anchors.append(a1)
 
         motorJoint = self.world.CreateRevoluteJoint(
             bodyA=body,
