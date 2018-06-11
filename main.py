@@ -15,14 +15,22 @@ class GP (Framework):
     # Evolution parameters:
     max_simulation_time = 30.
     population_size = 20
+    max_depth = 5
     terminal_set = ['E']
-    function_set = ['L']
+    function_set = ['L', 'S']
+
+    #part ranges
+    min_speed = -10
+    max_speed = 10
+    min_length = 1
+    max_length = 5
 
     def __init__(self):
         super(GP, self).__init__()
 
         self.primitive_set = {'L': self.create_arm,
-                              'E': self.create_endpoint,}
+                              'E': self.create_endpoint,
+                              'S': self.create_split}
 
         self.creatures = []
         self.simulation_time = 0
@@ -79,7 +87,7 @@ class GP (Framework):
             best_graphs = [creature.graph for creature in best_creatures]
             new_graphs = self.evolve_creatures(best_graphs, self.population_size)
             new_population = [self.creature_from_graph(graph) for graph in new_graphs]
-            # TODO: delete old creatures
+            self.destroy_creatures(self.creatures)
             self.creatures = new_population
 
             print('Best fitness: {}'.format(self.best_fitness))
@@ -138,9 +146,35 @@ class GP (Framework):
 
     def creature_from_graph(self, graph):
         # TODO: create new creature parts from graph
-        partlist = []
+        root = self.create_root()
+        openlist = [root]
+        partlist = [root[0]]
+
+        while len(openlist) > 0:
+            body, anchors, enc = openlist.pop()
+
+            for i, anchor in enumerate(anchors):
+                next_enc = graph[enc][i]
+                func, angle, speed, length, graph_code = self.decode_part(next_enc)
+                # create part and anchors
+                part = func(anchor,
+                            body,
+                            graph_code,
+                            angle=angle,
+                            speed=speed,
+                            length=length)
+                # add unique graph string to encoding
+                if len(part[1]) > 0:
+                    openlist.append(part)
+                partlist.append(part[0])
 
         return Creature(partlist, graph, self.generation)
+
+
+    def destroy_creatures(self, creatures):
+        for creature in creatures:
+            for body in creature.body:
+                self.world.DestroyBody(body)
 
 
     def encode_part(self, prefix, angle, speed, length, graph_code):
@@ -169,7 +203,7 @@ class GP (Framework):
         return body, anchors, 'R_0'
 
 
-    def create_arm(self, anchor, connected, graph_code, angle=45, speed=2, length=4):
+    def create_arm(self, anchor, connected, graph_code, angle=45, speed=5, length=4):
 
         #define body
         p1 = b2Vec2(0, -1)
@@ -192,10 +226,9 @@ class GP (Framework):
         )
 
         #define joints
-        rad = (angle+90) * b2_pi / 180
-        a1 = b2Vec2(anchor.x+np.cos(rad)*length, anchor.y+np.sin(rad)*length)
-        anchors = []
-        anchors.append(a1)
+        rad1 = (angle + 90) * b2_pi / 180
+        a1 = b2Vec2(anchor.x + np.cos(rad1) * length, anchor.y + np.sin(rad1) * length)
+        anchors = [a1]
 
         motorJoint = self.world.CreateRevoluteJoint(
             bodyA=body,
@@ -209,7 +242,48 @@ class GP (Framework):
         return body, anchors, self.encode_part('L', angle, speed, length, graph_code)
 
 
-    def create_endpoint(self, anchor, connected, graph_code, angle=0, speed=2, length=2):
+    def create_split(self, anchor, connected, graph_code, angle=45, speed=5, length=4):
+
+        #define body
+        p1 = b2Vec2(0, -1)
+        p2 = b2Vec2(-1, 0)
+        p3 = b2Vec2(-2, length+1)
+        p4 = b2Vec2(0, length+2)
+        p5 = b2Vec2(2, length+1)
+        p6 = b2Vec2(1, 0)
+
+        poly = b2PolygonShape(vertices=(p1, p2, p3, p4, p5, p6))
+
+        body = self.world.CreateDynamicBody(
+            position=anchor,
+            angle=angle * b2_pi / 180,
+            angularDamping=10,
+            fixtures=b2FixtureDef(
+                shape=poly,
+                groupIndex=-1,
+                density=1),
+        )
+
+        #define joints
+        rad1 = (angle+80) * b2_pi / 180
+        rad2 = (angle+100) * b2_pi / 180
+        a1 = b2Vec2(anchor.x + np.cos(rad1) * length, anchor.y + np.sin(rad1) * length)
+        a2 = b2Vec2(anchor.x + np.cos(rad2) * length, anchor.y + np.sin(rad2) * length)
+        anchors = [a1, a2]
+
+        motorJoint = self.world.CreateRevoluteJoint(
+            bodyA=body,
+            bodyB=connected,
+            anchor=anchor,
+            collideConnected=False,
+            motorSpeed=speed,
+            maxMotorTorque=1000,
+            enableMotor=self.motorOn)
+
+        return body, anchors, self.encode_part('S', angle, speed, length, graph_code)
+
+
+    def create_endpoint(self, anchor, connected, graph_code, angle=0, speed=5, length=2):
         # define body
         p1 = b2Vec2(0, -1)
         p2 = b2Vec2(-1, 0)
@@ -258,9 +332,18 @@ class GP (Framework):
 
             for i, anchor in enumerate(anchors):
                 # choose random part
-                name, func = random.choice(list(self.primitive_set.items()))
+                if len(graph_code) < self.max_depth:
+                    name, func = random.choice(list(self.primitive_set.items()))
+                else:
+                    name = random.choice(self.terminal_set)
+                    func = self.primitive_set[name]
                 # create part and anchors
-                part = func(anchor, body, graph_code+str(i))
+                part = func(anchor,
+                            body,
+                            graph_code+str(i),
+                            angle=np.random.randint(0, 360),
+                            speed=np.random.randint(self.min_speed, self.max_speed),
+                            length=np.random.randint(self.min_length, self.max_length))
                 # add unique graph string to encoding
                 if len(part[1]) > 0:
                     openlist.append(part)
