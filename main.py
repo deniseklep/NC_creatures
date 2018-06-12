@@ -96,17 +96,17 @@ class GP (Framework):
     def select_best_creatures(self, creatures, n=2):
         # Randomly select n best creatures based on fitness
         best_creatures = []
-        max = sum([creature.get_fitness() for creature in creatures])
+        fitnesses = [creature.get_fitness() for creature in creatures]
+        max = sum(fitnesses)
+        rel_fitness = [f / max for f in fitnesses]
+        probs = [sum(rel_fitness[:i + 1]) for i in range(len(rel_fitness))]
         while len(best_creatures) < n:
-            select = random.uniform(0,max)
-            current = 0
-            for creature in creatures:
-                current += creature.get_fitness()
-                if current > select:
-                    best_creatures.append(creature)
-        shuffle(best_creatures)
-        delete = len(best_creatures)-n
-        del best_creatures[-delete:]
+            r = np.random.random()
+            for (i, creature) in enumerate(creatures):
+                if r <= probs[i]:
+                    if creature not in best_creatures:
+                        best_creatures.append(creature)
+                    break
         return best_creatures
 
 
@@ -117,7 +117,7 @@ class GP (Framework):
             if 'E' in m:
                 pass
             else:
-                self.find_child(g, g[m], tbdel)
+                self.find_child(g, m, tbdel)
 
 
     def evolve_creatures(self, graphs, n=10, p_mut_part = 1.0, p_mut_param = 0.4, p_crossover = 0.2):
@@ -125,9 +125,9 @@ class GP (Framework):
         for g in graphs:
             if np.random.random() < p_mut_part:
                 print('graph: {}'.format(g))
-                print(g.keys())
                 tbmut = random.choice(list(g.keys()))
-                tbdel = self.find_child(g, tbmut, [])
+                tbdel = []
+                self.find_child(g, tbmut, tbdel)
                 print('to be deleted: {}'.format(tbdel))
                 for i in tbdel:
                     del(g[i])
@@ -143,7 +143,6 @@ class GP (Framework):
 
 
     def creature_from_graph(self, graph):
-        # TODO: create new creature parts from graph
         root = self.create_root()
         openlist = [root]
         partlist = [root[0]]
@@ -161,7 +160,6 @@ class GP (Framework):
                             angle=angle,
                             speed=speed,
                             length=length)
-                # add unique graph string to encoding
                 if len(part[1]) > 0:
                     openlist.append(part)
                 partlist.append(part[0])
@@ -177,7 +175,6 @@ class GP (Framework):
 
     def encode_part(self, prefix, angle, speed, length, graph_code):
         return '{}_{:03d}_{:03d}_{:03d}_{}'.format(prefix, angle, speed, length, graph_code)
-
 
 
     def decode_part(self, str):
@@ -347,7 +344,6 @@ class GP (Framework):
                     openlist.append(part)
                 graph[enc].append(part[2])
                 partlist.append(part[0])
-        print(graph)
         return Creature(partlist, graph, self.generation)
 
 
@@ -361,7 +357,7 @@ class Creature:
 
     def get_fitness(self):
         # return x coordinate of root as fitness value
-        return self.body[0].position.x
+        return max(self.body[0].position.x, 0)
 
     def update(self, timestep):
         self.time_alive += timestep
