@@ -111,13 +111,9 @@ class GP (Framework):
 
 
     def find_child(self, g, tbmut, tbdel):
-        print('to be mutated: {}'.format(tbmut))
         tbdel.append(tbmut)
         for m in g[tbmut]:
-            if 'E' in m:
-                pass
-            else:
-                self.find_child(g, m, tbdel)
+            self.find_child(g, m, tbdel)
 
 
     def evolve_creatures(self, graphs, n=10, p_mut_part = 1.0, p_mut_param = 0.4, p_crossover = 0.2):
@@ -140,6 +136,11 @@ class GP (Framework):
 
 
         return graphs
+
+
+    def create_random_subgraph(self, root, graph):
+        # TODO: create random sub-graph from root node
+        return graph
 
 
     def creature_from_graph(self, graph):
@@ -340,8 +341,7 @@ class GP (Framework):
                             speed=np.random.randint(self.min_speed, self.max_speed),
                             length=np.random.randint(self.min_length, self.max_length))
                 # add unique graph string to encoding
-                if len(part[1]) > 0:
-                    openlist.append(part)
+                openlist.append(part)
                 graph[enc].append(part[2])
                 partlist.append(part[0])
         return Creature(partlist, graph, self.generation)
