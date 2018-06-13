@@ -3,7 +3,6 @@ from Box2D import (b2CircleShape, b2EdgeShape, b2FixtureDef, b2PolygonShape,
                    b2Vec2, b2_pi)
 import random
 import numpy as np
-from random import shuffle
 
 
 class GP (Framework):
@@ -132,7 +131,35 @@ class GP (Framework):
             elif np.random.random() < p_mut_param:
                 pass
             elif np.random.random() < p_crossover:
-                pass
+            #  Probleem 1 : de child node wordt eruit gehaald maar de verwijzing naar de child in de parent node niet,
+            #  waardoor na de crossover er nog een foute node tussen staat
+            #  Probleem 2 : de hierarchy wordt in find_child niet opgeslagen dus na crossover zijn alle gekopieerde
+            #  nodes nieuwe children ipv child van child oid.
+                print('graph1: {}'.format(g))
+                tbcross1 = random.choice(list(g.keys()))
+                children1 = []
+                self.find_child(g, tbcross1, children1)  # Problem is that the hierarchy is forgotten
+                print('children1: {}'.format(children1))
+                for i in children1:
+                    del (g[i])
+                print('graph1 deleted: {}'.format(g))
+                for g2 in graphs:
+                    if g2 != g and np.random.random() < p_crossover:
+                        tbcross2 = random.choice(list(g2.keys()))  # TODO: prevent tbcross1 = tbcross2 and empty
+                        print('graph2: {}'.format(g2))
+
+                        children2 = []
+                        self.find_child(g2, tbcross2, children2)
+                        print('children2: {}'.format(children2))
+                        for i in children2:
+                            del (g2[i])
+                        print('graph2 deleted: {}'.format(g2))
+
+                        g[tbcross1] = children2
+                        g2[tbcross2] = children1
+                        print('graph1after: {}'.format(g))
+                        print('graph2after: {}'.format(g2))
+
 
 
         return graphs
