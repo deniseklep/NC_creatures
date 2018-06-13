@@ -117,7 +117,11 @@ class GP (Framework):
 
     def evolve_creatures(self, graphs, n=10, p_mut_part = 1.0, p_mut_param = 0.4, p_crossover = 0.2):
         # TODO: create n new creatures by random mutation and crossover of the graphs
-        for g in graphs:
+        # copy graphs until there are n
+        new_graphs = []
+        for i in range(n):
+            new_graphs.append(graphs[i % len(graphs)].copy())
+        for g in new_graphs:
             if np.random.random() < p_mut_part:
                 print('graph: {}'.format(g))
                 tbmut = random.choice(list(g.keys()))
@@ -129,7 +133,8 @@ class GP (Framework):
 
 
             elif np.random.random() < p_mut_param:
-                pass
+                tbmut = random.choice(list(g.keys()))
+
             elif np.random.random() < p_crossover:
             #  Probleem 1 : de child node wordt eruit gehaald maar de verwijzing naar de child in de parent node niet,
             #  waardoor na de crossover er nog een foute node tussen staat
@@ -162,7 +167,7 @@ class GP (Framework):
 
 
 
-        return graphs
+        return new_graphs
 
 
     def create_random_subgraph(self, root, graph):
