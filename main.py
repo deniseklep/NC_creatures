@@ -35,6 +35,9 @@ class GP (Framework):
         self.simulation_time = 0
         self.generation = 0
         self.best_fitness = 0
+        self.fitnesses = []
+        self.average_complexity = 0
+        self.complexities = []
 
         # The ground
         ground = self.world.CreateStaticBody(
@@ -80,7 +83,14 @@ class GP (Framework):
                 creature.update(1.0 / settings.hz)
         else:
             # Create new generation
-            self.simulation_time = 0
+            self.best_fitness = max([creature.get_fitness() for creature in self.creatures])
+            self.fitnesses.append(self.best_fitness)
+            print('Best fitness: {}'.format(self.best_fitness))
+            # Calculate average creature complexity
+            self.average_complexity = sum([len(creature.body)-1 for creature in self.creatures])/self.population_size
+            self.complexities.append(self.average_complexity)
+            print('Average complexity: {}'.format(self.average_complexity))
+
             self.generation += 1
             best_creatures = self.select_best_creatures(self.creatures)
             best_graphs = [creature.graph for creature in best_creatures]
@@ -89,7 +99,7 @@ class GP (Framework):
             self.destroy_creatures(self.creatures)
             self.creatures = new_population
 
-            print('Best fitness: {}'.format(self.best_fitness))
+            self.simulation_time = 0
 
 
     def select_best_creatures(self, creatures, n=2):
