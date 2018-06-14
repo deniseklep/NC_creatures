@@ -12,7 +12,7 @@ class GP (Framework):
     motorOn = True
 
     # Evolution parameters:
-    max_simulation_time = 30.
+    max_simulation_time = 2.
     population_size = 20
     max_depth = 5
     terminal_set = ['E']
@@ -108,8 +108,17 @@ class GP (Framework):
                     break
         return best_creatures
 
+    def delete_connections(self, g, tbmut, tbdel):
+        # delete connection to child nodes
+        for i in tbdel:
+            del (g[i])
+
+        # delete connection to parent node
+        return {k: [vi for vi in v if vi != tbmut] for k, v in g.items()}
+
 
     def find_child(self, g, tbmut, tbdel):
+        # find child nodes recursively
         tbdel.append(tbmut)
         for m in g[tbmut]:
             self.find_child(g, m, tbdel)
@@ -123,14 +132,16 @@ class GP (Framework):
             new_graphs.append(graphs[i % len(graphs)].copy())
         for g in new_graphs:
             if np.random.random() < p_mut_part:
-                print('graph: {}'.format(g))
+                print('graph before: {}'.format(g))
                 tbmut = random.choice(list(g.keys()))
+                print('to be mutated: {}'.format(tbmut))
                 tbdel = []
                 self.find_child(g, tbmut, tbdel)
                 print('to be deleted: {}'.format(tbdel))
-                for i in tbdel:
-                    del(g[i])
+                g = self.delete_connections(g, tbmut, tbdel)
+                print('graph after: {}'.format(g))
 
+                #TODO actual mutation part
 
             elif np.random.random() < p_mut_param:
                 tbmut = random.choice(list(g.keys()))
