@@ -144,6 +144,7 @@ class GP (Framework):
         new_graphs = []
         for i in range(n):
             new_graphs.append(graphs[i % len(graphs)].copy())
+        # mutate every graph randomly
         for g in new_graphs:
             if np.random.random() < p_mut_part:
                 print('graph before: {}'.format(g))
@@ -161,7 +162,16 @@ class GP (Framework):
 
 
             elif np.random.random() < p_mut_param:
-                tbmut = random.choice(list(g.keys()))
+                tbmut = random.choice([x for x in list(g.keys()) if not x.startswith('R')])
+                split = tbmut.split('_')
+                part = self.decode_part(tbmut)
+                angle = (part[1] + int(np.random.normal(scale=90))) % 360
+                speed = np.clip([part[2] + int(np.random.normal(scale=5))], self.min_speed, self.max_speed)[0]
+                length = np.clip([part[3] + int(np.random.normal(scale=2))], self.min_length, self.max_length)[0]
+                new_tbmut = self.encode_part(split[0], angle, speed, length, split[-1])
+                g[new_tbmut] = g.pop(tbmut)
+                for k, v in g.items():
+                    g[k] = [new_tbmut if i == tbmut else i for i in v]
 
             elif np.random.random() < p_crossover:
             #  Probleem 1 : de child node wordt eruit gehaald maar de verwijzing naar de child in de parent node niet,
