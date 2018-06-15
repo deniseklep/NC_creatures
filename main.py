@@ -118,11 +118,15 @@ class GP (Framework):
                     break
         return best_creatures
 
+    def find_parent(self, g, tbmut):
+        for k,v in g.items():
+            if tbmut in v:
+                return k
+
     def delete_connections(self, g, tbmut, tbdel):
         # delete connection to child nodes
         for i in tbdel:
             del (g[i])
-
         # delete connection to parent node
         return {k: [vi for vi in v if vi != tbmut] for k, v in g.items()}
 
@@ -147,11 +151,14 @@ class GP (Framework):
                 print('to be mutated: {}'.format(tbmut))
                 tbdel = []
                 self.find_child(g, tbmut, tbdel)
-                print('to be deleted: {}'.format(tbdel))
+                #print('to be deleted: {}'.format(tbdel))
+                parent = self.find_parent(g, tbmut)
+                print(parent)
                 g = self.delete_connections(g, tbmut, tbdel)
-                print('graph after: {}'.format(g))
+                #print('graph after: {}'.format(g))
 
                 #TODO actual mutation part
+
 
             elif np.random.random() < p_mut_param:
                 tbmut = random.choice(list(g.keys()))
@@ -193,6 +200,7 @@ class GP (Framework):
 
     def create_random_subgraph(self, root, graph):
         # TODO: create random sub-graph from root node
+
         return graph
 
 
