@@ -3,7 +3,7 @@ from Box2D import (b2CircleShape, b2EdgeShape, b2FixtureDef, b2PolygonShape,
                    b2Vec2, b2_pi)
 import random
 import numpy as np
-
+import csv
 
 class GP (Framework):
     name = "Genetic Programming Creatures"
@@ -39,6 +39,9 @@ class GP (Framework):
         self.average_complexity = 0
         self.complexities = []
 
+        self.fitness_file = 'fitness.csv'
+        self.complexity_file = 'complexities.csv'
+
         # The ground
         ground = self.world.CreateStaticBody(
             shapes=[
@@ -71,6 +74,14 @@ class GP (Framework):
         for i in range(self.population_size):
             self.creatures.append(self.create_prototype())
 
+        with open(self.fitness_file, 'w', newline='') as f:
+            wr = csv.writer(f)
+            wr.writerow(['generation', 'best fitness'])
+
+        with open(self.complexity_file, 'w', newline='') as f:
+            wr = csv.writer(f)
+            wr.writerow(['generation', 'average complexity'])
+
 
     def Step(self, settings):
         super(GP, self).Step(settings)
@@ -85,10 +96,12 @@ class GP (Framework):
             # Create new generation
             self.best_fitness = max([creature.get_fitness() for creature in self.creatures])
             self.fitnesses.append(self.best_fitness)
+            self.write_to_csv(self.fitness_file, self.best_fitness)
             print('Best fitness: {}'.format(self.best_fitness))
             # Calculate average creature complexity
             self.average_complexity = sum([len(creature.body)-1 for creature in self.creatures])/self.population_size
             self.complexities.append(self.average_complexity)
+            self.write_to_csv(self.complexity_file, self.average_complexity)
             print('Average complexity: {}'.format(self.average_complexity))
 
             self.generation += 1
@@ -100,6 +113,11 @@ class GP (Framework):
             self.creatures = new_population
 
             self.simulation_time = 0
+
+    def write_to_csv(self, file, value):
+        with open(file, 'a', newline='') as f:
+            wr = csv.writer(f)
+            wr.writerow([self.generation, value])
 
 
     def select_best_creatures(self, creatures, n=2):
