@@ -12,7 +12,7 @@ class GP (Framework):
     motorOn = True
 
     # Evolution parameters:
-    max_simulation_time = 30.
+    max_simulation_time = 2.
     population_size = 20
     max_depth = 5
     terminal_set = ['E']
@@ -137,7 +137,8 @@ class GP (Framework):
         return best_creatures
 
     def find_parent(self, g, tbmut):
-        for k,v in g.items():
+        # find parent of tbmut in graph g
+        for k, v in g.items():
             if tbmut in v:
                 return k
 
@@ -156,8 +157,7 @@ class GP (Framework):
             self.find_child(g, m, tbdel)
 
 
-    def evolve_creatures(self, graphs, n=10, p_mut_part = 0.0, p_mut_param = 0.5, p_crossover = 0.5):
-        # TODO: create n new creatures by random mutation and crossover of the graphs
+    def evolve_creatures(self, graphs, n=10, p_mut_part = 1.0, p_mut_param = 0.5, p_crossover = 0.5):
         # copy graphs until there are n
         new_graphs = []
         for i in range(n):
@@ -172,12 +172,12 @@ class GP (Framework):
                 self.find_child(g, tbmut, tbdel)
                 #print('to be deleted: {}'.format(tbdel))
                 parent = self.find_parent(g, tbmut)
-                print(parent)
+                print('parent: {}'.format(parent))
                 g = self.delete_connections(g, tbmut, tbdel)
                 #print('graph after: {}'.format(g))
-
-                #TODO actual mutation part
-
+                g = self.create_random_subgraph(parent, g)
+                #print('mutated graph: {}'.format(g))
+                new_graphs[i] = g
 
             elif np.random.random() < p_mut_param:
                 tbmut = random.choice([x for x in list(g.keys()) if not x.startswith('R')])
@@ -239,10 +239,34 @@ class GP (Framework):
 
 
     def create_random_subgraph(self, root, graph):
-        # TODO: create random sub-graph from root node
+        # Continue mutated graph from the parent of the deleted node downward
+
+        anchor_set = {'L': 1, 'E': 0, 'S': 2, 'R': 1}
+        openlist = [root] # add parent of tbmut to openlist as root node
+
+        while len(openlist) > 0:
+            part = openlist.pop()
+            anchors = anchor_set[part[0]]
+            part_code = part.split('_')[-1]
+            graph[part] = []
+
+            for i in range(anchors):
+
+                if len(part_code) < self.max_depth:
+                    name, _ = random.choice(list(self.primitive_set.items()))
+                else:
+                    name = random.choice(self.terminal_set)
+
+                prefix = name
+                angle = np.random.randint(0, 360)
+                speed = np.random.randint(self.min_speed, self.max_speed)
+                length = np.random.randint(self.min_length, self.max_length)
+                graph_code = part_code + str(i)
+
+                openlist.append(self.encode_part(prefix, angle, speed, length, graph_code))
+                graph[part].append(self.encode_part(prefix, angle, speed, length, graph_code))
 
         return graph
-
 
     def creature_from_graph(self, graph):
         root = self.create_root()
@@ -284,7 +308,7 @@ class GP (Framework):
         return self.primitive_set[split[0]], int(split[1]), int(split[2]), int(split[3]), split[4]
 
 
-    def create_root(self):
+    def create_root(self, not_create=False):
         body = self.world.CreateDynamicBody(
             position=self.offset,
             fixtures=b2FixtureDef(
@@ -297,10 +321,13 @@ class GP (Framework):
         anchors = []
         anchors.append(self.offset)
 
+        if not_create:
+            self.world.DestroyBody(body)
+
         return body, anchors, 'R_0'
 
 
-    def create_arm(self, anchor, connected, graph_code, angle=45, speed=5, length=4):
+    def create_arm(self, anchor, connected, graph_code, angle=45, speed=5, length=4, not_create=False):
 
         #define body
         p1 = b2Vec2(0, -1)
@@ -336,10 +363,13 @@ class GP (Framework):
             maxMotorTorque=1000,
             enableMotor=self.motorOn)
 
+        if not_create:
+            self.world.DestroyBody(body)
+
         return body, anchors, self.encode_part('L', angle, speed, length, graph_code)
 
 
-    def create_split(self, anchor, connected, graph_code, angle=45, speed=5, length=4):
+    def create_split(self, anchor, connected, graph_code, angle=45, speed=5, length=4, not_create=False):
 
         #define body
         p1 = b2Vec2(0, -1)
@@ -377,10 +407,13 @@ class GP (Framework):
             maxMotorTorque=1000,
             enableMotor=self.motorOn)
 
+        if not_create:
+            self.world.DestroyBody(body)
+
         return body, anchors, self.encode_part('S', angle, speed, length, graph_code)
 
 
-    def create_endpoint(self, anchor, connected, graph_code, angle=0, speed=5, length=2):
+    def create_endpoint(self, anchor, connected, graph_code, angle=0, speed=5, length=2, not_create=False):
         # define body
         p1 = b2Vec2(0, -1)
         p2 = b2Vec2(-1, 0)
@@ -412,6 +445,9 @@ class GP (Framework):
             motorSpeed=speed,
             maxMotorTorque=1000,
             enableMotor=self.motorOn)
+
+        if not_create:
+            self.world.DestroyBody(body)
 
         return body, anchors, self.encode_part('E', angle, speed, length, graph_code)
 
