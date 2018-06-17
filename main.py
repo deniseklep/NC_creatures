@@ -151,12 +151,13 @@ class GP (Framework):
 
     def find_child(self, g, tbmut, tbdel):
         # find child nodes recursively
+        # tbdel.append({tbmut})
         tbdel.append(tbmut)
         for m in g[tbmut]:
             self.find_child(g, m, tbdel)
 
 
-    def evolve_creatures(self, graphs, n=10, p_mut_part = 1.0, p_mut_param = 0.4, p_crossover = 0.2):
+    def evolve_creatures(self, graphs, n=10, p_mut_part = 0.0, p_mut_param = 0.4, p_crossover = 1.0):
         # TODO: create n new creatures by random mutation and crossover of the graphs
         # copy graphs until there are n
         new_graphs = []
@@ -192,32 +193,37 @@ class GP (Framework):
                     g[k] = [new_tbmut if i == tbmut else i for i in v]
 
             elif np.random.random() < p_crossover:
-            #  Probleem 1 : de child node wordt eruit gehaald maar de verwijzing naar de child in de parent node niet,
-            #  waardoor na de crossover er nog een foute node tussen staat
-            #  Probleem 2 : de hierarchy wordt in find_child niet opgeslagen dus na crossover zijn alle gekopieerde
-            #  nodes nieuwe children ipv child van child oid.
                 print('graph1: {}'.format(g))
-                tbcross1 = random.choice(list(g.keys()))
+                keys1 = [k for k, v in g.items() if not k.startswith('R')]
+                tbcross1 = random.choice(keys1)
+
                 children1 = []
-                self.find_child(g, tbcross1, children1)  # Problem is that the hierarchy is forgotten
+                self.find_child(g, tbcross1, children1)  #  TODO Problem is that the hierarchy is forgotten
                 print('children1: {}'.format(children1))
-                for i in children1:
-                    del (g[i])
+                parent1 = self.find_parent(g, tbcross1)
+                print('parent1: {}'.format(parent1))
+                g = self.delete_connections(g, tbcross1, children1)
                 print('graph1 deleted: {}'.format(g))
                 for g2 in graphs:
                     if g2 != g and np.random.random() < p_crossover:
-                        tbcross2 = random.choice(list(g2.keys()))  # TODO: prevent tbcross1 = tbcross2 and empty
+                        keys2 = [k for k in g2.keys() if not k.startswith('R')]
+                        tbcross2 = random.choice(keys2)
                         print('graph2: {}'.format(g2))
 
                         children2 = []
                         self.find_child(g2, tbcross2, children2)
                         print('children2: {}'.format(children2))
-                        for i in children2:
-                            del (g2[i])
+                        parent2 = self.find_parent(g2, tbcross2)
+                        print('parent2: {}'.format(parent2))
+                        g2 = self.delete_connections(g2, tbcross2, children2)
                         print('graph2 deleted: {}'.format(g2))
 
-                        g[tbcross1] = children2
-                        g2[tbcross2] = children1
+                        # g[parent1].append(children2)
+                        # g2[parent2].append(children1)
+                        for k, v in g.items():
+                            g[k] = [children2.pop(0) if k == parent1 else i for i in v]
+                        for k, v in g2.items():
+                            g2[k] = [children1.pop(0) if k == parent2 else i for i in v]
                         print('graph1after: {}'.format(g))
                         print('graph2after: {}'.format(g2))
 
