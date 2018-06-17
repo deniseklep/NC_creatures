@@ -12,7 +12,7 @@ class GP (Framework):
     motorOn = True
 
     # Evolution parameters:
-    max_simulation_time = 2.
+    max_simulation_time = 30.
     population_size = 20
     max_depth = 5
     terminal_set = ['E']
@@ -151,23 +151,22 @@ class GP (Framework):
 
     def find_child(self, g, tbmut, tbdel):
         # find child nodes recursively
-        # tbdel.append({tbmut})
         tbdel.append(tbmut)
         for m in g[tbmut]:
             self.find_child(g, m, tbdel)
 
 
-    def evolve_creatures(self, graphs, n=10, p_mut_part = 0.0, p_mut_param = 0.4, p_crossover = 1.0):
+    def evolve_creatures(self, graphs, n=10, p_mut_part = 0.0, p_mut_param = 0.5, p_crossover = 0.5):
         # TODO: create n new creatures by random mutation and crossover of the graphs
         # copy graphs until there are n
         new_graphs = []
         for i in range(n):
             new_graphs.append(graphs[i % len(graphs)].copy())
         # mutate every graph randomly
-        for g in new_graphs:
+        for i, g in enumerate(new_graphs):
             if np.random.random() < p_mut_part:
                 print('graph before: {}'.format(g))
-                tbmut = random.choice(list(g.keys()))
+                tbmut = random.choice([x for x in list(g.keys()) if not x.startswith('R')])
                 print('to be mutated: {}'.format(tbmut))
                 tbdel = []
                 self.find_child(g, tbmut, tbdel)
@@ -193,43 +192,50 @@ class GP (Framework):
                     g[k] = [new_tbmut if i == tbmut else i for i in v]
 
             elif np.random.random() < p_crossover:
-                print('graph1: {}'.format(g))
-                keys1 = [k for k, v in g.items() if not k.startswith('R')]
-                tbcross1 = random.choice(keys1)
-
+                tbcross1 = random.choice([x for x in list(g.keys()) if not x.startswith('R')])
                 children1 = []
-                self.find_child(g, tbcross1, children1)  #  TODO Problem is that the hierarchy is forgotten
-                print('children1: {}'.format(children1))
+                self.find_child(g, tbcross1, children1)
+                subgraph1 = {c: g[c] for c in children1}
                 parent1 = self.find_parent(g, tbcross1)
-                print('parent1: {}'.format(parent1))
                 g = self.delete_connections(g, tbcross1, children1)
-                print('graph1 deleted: {}'.format(g))
-                for g2 in graphs:
-                    if g2 != g and np.random.random() < p_crossover:
-                        keys2 = [k for k in g2.keys() if not k.startswith('R')]
-                        tbcross2 = random.choice(keys2)
-                        print('graph2: {}'.format(g2))
-
-                        children2 = []
-                        self.find_child(g2, tbcross2, children2)
-                        print('children2: {}'.format(children2))
-                        parent2 = self.find_parent(g2, tbcross2)
-                        print('parent2: {}'.format(parent2))
-                        g2 = self.delete_connections(g2, tbcross2, children2)
-                        print('graph2 deleted: {}'.format(g2))
-
-                        # g[parent1].append(children2)
-                        # g2[parent2].append(children1)
-                        for k, v in g.items():
-                            g[k] = [children2.pop(0) if k == parent1 else i for i in v]
-                        for k, v in g2.items():
-                            g2[k] = [children1.pop(0) if k == parent2 else i for i in v]
-                        print('graph1after: {}'.format(g))
-                        print('graph2after: {}'.format(g2))
-
-
+                # Do not mutate with itself (or its clone)
+                j, g2 = random.choice([(j, g2) for j, g2 in enumerate(new_graphs) if j % len(graphs) is not i % len(graphs)])
+                tbcross2 = random.choice([x for x in list(g2.keys()) if not x.startswith('R')])
+                children2 = []
+                self.find_child(g2, tbcross2, children2)
+                subgraph2 = {c: g2[c] for c in children2}
+                parent2 = self.find_parent(g2, tbcross2)
+                g2 = self.delete_connections(g2, tbcross2, children2)
+                # Add subgraphs
+                self.add_subgraph(g, parent1, tbcross2, subgraph2)
+                self.add_subgraph(g2, parent2, tbcross1, subgraph1)
+                new_graphs[i] = g
+                new_graphs[j] = g2
 
         return new_graphs
+
+
+    def add_subgraph(self, graph, parent, root, subgraph):
+        # Lots of code to fix the graphcode
+        parentcode = parent.split("_")[-1]
+        rootcode = root.split("_")[-1]
+        kids = graph[parent]
+        missing_nr = 0
+        if len(kids) > 0:
+            missing_nr = sorted(set(range(len(kids)+1)).difference([int(x.split("_")[-1][-1]) for x in kids]))[0]
+        newcode = parentcode + str(missing_nr)
+        kids.append(self.new_graph_code(root, rootcode, newcode))
+        for k, v in subgraph.items():
+            new_k = self.new_graph_code(k, rootcode, newcode)
+            new_v = [self.new_graph_code(c, rootcode, newcode) for c in v]
+            graph[new_k] = new_v
+
+
+    def new_graph_code(self, part, oldroot, newroot):
+        split = part.split("_")
+        newcode = split[-1].replace(oldroot, newroot, 1)
+        newpart = "_".join(split[:-1] + [newcode])
+        return newpart
 
 
     def create_random_subgraph(self, root, graph):
