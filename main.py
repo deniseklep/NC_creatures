@@ -204,6 +204,7 @@ class GP (Framework):
                     g[k] = [new_tbmut if i == tbmut else i for i in v]
 
             elif np.random.random() < p_crossover:
+                og = g.copy()
                 tbcross1 = random.choice([x for x in list(g.keys()) if not x.startswith('R')])
                 children1 = []
                 self.find_child(g, tbcross1, children1)
@@ -212,6 +213,7 @@ class GP (Framework):
                 g = self.delete_connections(g, tbcross1, children1)
                 # Do not mutate with itself (or its clone)
                 j, g2 = random.choice([(j, g2) for j, g2 in enumerate(new_graphs) if j % len(graphs) is not i % len(graphs)])
+                og2 = g2.copy()
                 tbcross2 = random.choice([x for x in list(g2.keys()) if not x.startswith('R')])
                 children2 = []
                 self.find_child(g2, tbcross2, children2)
@@ -221,8 +223,12 @@ class GP (Framework):
                 # Add subgraphs
                 self.add_subgraph(g, parent1, tbcross2, subgraph2)
                 self.add_subgraph(g2, parent2, tbcross1, subgraph1)
-                new_graphs[i] = g
-                new_graphs[j] = g2
+                if max([len(part.split("_")[-1])-1 for part in g.keys()]) < self.max_depth and max([len(part.split("_")[-1])-1 for part in g2.keys()])  < self.max_depth:
+                    new_graphs[i] = g
+                    new_graphs[j] = g2
+                else:
+                    new_graphs[i] = og
+                    new_graphs[j] = og2
 
         return new_graphs
 
