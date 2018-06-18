@@ -12,7 +12,7 @@ class GP (Framework):
     motorOn = True
 
     # Evolution parameters:
-    max_simulation_time = 2.
+    max_simulation_time = 30.
     population_size = 20
     max_depth = 5
     terminal_set = ['E']
@@ -52,26 +52,28 @@ class GP (Framework):
             ]
         )
 
-        obstacle_count = 400
+        self.obstacle_count = 400
 
         # Pre-defined obstacle types
-        box = b2FixtureDef(
+        self.box = b2FixtureDef(
             shape=b2PolygonShape(box=(0.6, 0.6)), #large
             density=1,
             friction=0.3)
-        circle = b2FixtureDef(
+        self.circle = b2FixtureDef(
             shape=b2CircleShape(radius=0.2), #small
             density=1)
-        triangle = b2FixtureDef(
+        self.triangle = b2FixtureDef(
             shape=b2PolygonShape(vertices=[(0,0),(1,1),(0,1)]), #middle
             density=1)
 
         # Randomly generated obstacle shapes and distances
-        obstacles = [box, circle, triangle]
-        for i in range(obstacle_count):
+        obstacle_set = [self.box, self.circle, self.triangle]
+        self.obstacles = []
+        for i in range(self.obstacle_count):
             obstacle = self.world.CreateStaticBody(
-                fixtures=random.choice(obstacles),
+                fixtures=random.choice(obstacle_set),
                 position=(-40 + np.int(np.random.choice(40, 1).squeeze()) * i, 0.5))
+            self.obstacles.append(obstacle)
 
         # Create initial population
         for i in range(self.population_size):
@@ -116,8 +118,21 @@ class GP (Framework):
             self.write_to_csv(self.depth_file, self.average_depth)
             print('Average depth: {}'.format(self.average_depth))
 
+            # Destroy previous obstacles
+            for i in self.obstacles:
+                self.world.DestroyBody(i)
+
+            # Randomly generated obstacle shapes and distances
+            obstacle_set = [self.box, self.circle, self.triangle]
+            self.obstacles = []
+            for i in range(self.obstacle_count):
+                obstacle = self.world.CreateStaticBody(
+                    fixtures=random.choice(obstacle_set),
+                    position=(-40 + np.int(np.random.choice(40, 1).squeeze()) * i, 0.5))
+                self.obstacles.append(obstacle)
+
             self.generation += 1
-            best_creatures = self.select_best_creatures(self.creatures, 5)
+            best_creatures = self.select_best_creatures(self.creatures)
             best_graphs = [creature.graph for creature in best_creatures]
             new_graphs = self.evolve_creatures(best_graphs, self.population_size)
             new_population = [self.creature_from_graph(graph) for graph in new_graphs]
@@ -169,29 +184,33 @@ class GP (Framework):
             self.find_child(g, m, tbdel)
 
 
-    def evolve_creatures(self, graphs, n=10, p_mut_part = 1.0, p_mut_param = 0.5, p_crossover = 0.5):
+    def evolve_creatures(self, graphs, n=10, p=[0.10, 0.15, 0.50 ,0.25]):
         # copy graphs until there are n
         new_graphs = []
         for i in range(n):
             new_graphs.append(graphs[i % len(graphs)].copy())
+
         # mutate every graph randomly
         for i, g in enumerate(new_graphs):
-            if np.random.random() < p_mut_part:
-                print('graph before: {}'.format(g))
+            chance = np.random.random()
+            if chance < p[0]:
+                #print('Mutating graph')
+                #print('graph before: {}'.format(g))
                 tbmut = random.choice([x for x in list(g.keys()) if not x.startswith('R')])
-                print('to be mutated: {}'.format(tbmut))
+                #print('to be mutated: {}'.format(tbmut))
                 tbdel = []
                 self.find_child(g, tbmut, tbdel)
                 #print('to be deleted: {}'.format(tbdel))
                 parent = self.find_parent(g, tbmut)
-                print('parent: {}'.format(parent))
+                #print('parent: {}'.format(parent))
                 g = self.delete_connections(g, tbmut, tbdel)
                 #print('graph after: {}'.format(g))
-                g = self.create_random_subgraph(parent, g)
+                g = self.create_random_subgraph(tbmut, parent, g)
                 #print('mutated graph: {}'.format(g))
                 new_graphs[i] = g
 
-            elif np.random.random() < p_mut_param:
+            elif chance < p[0]+p[1]:
+                #print('Mutating parameters')
                 tbmut = random.choice([x for x in list(g.keys()) if not x.startswith('R')])
                 split = tbmut.split('_')
                 part = self.decode_part(tbmut)
@@ -203,7 +222,8 @@ class GP (Framework):
                 for k, v in g.items():
                     g[k] = [new_tbmut if i == tbmut else i for i in v]
 
-            elif np.random.random() < p_crossover:
+            elif chance < p[0]+p[1]+p[2]:
+                #print('Crossover')
                 og = g.copy()
                 tbcross1 = random.choice([x for x in list(g.keys()) if not x.startswith('R')])
                 children1 = []
@@ -230,6 +250,10 @@ class GP (Framework):
                     new_graphs[i] = og
                     new_graphs[j] = og2
 
+            else:
+                #print('No')
+                pass
+        #print(len(new_graphs))
         return new_graphs
 
 
@@ -256,11 +280,20 @@ class GP (Framework):
         return newpart
 
 
-    def create_random_subgraph(self, root, graph):
+    def create_random_subgraph(self, root, parent, graph):
         # Continue mutated graph from the parent of the deleted node downward
 
         anchor_set = {'L': 1, 'E': 0, 'S': 2, 'R': 1}
-        openlist = [root] # add parent of tbmut to openlist as root node
+        # openlist = [root] # add parent of tbmut to openlist as root node
+
+        prefix = root[0]
+        angle = np.random.randint(0, 360)
+        speed = np.random.randint(self.min_speed, self.max_speed)
+        length = np.random.randint(self.min_length, self.max_length)
+        graph_code = root.split('_')[-1]
+
+        openlist = [self.encode_part(prefix, angle, speed, length, graph_code)]
+        graph[parent].append(self.encode_part(prefix, angle, speed, length, graph_code))
 
         while len(openlist) > 0:
             part = openlist.pop()
