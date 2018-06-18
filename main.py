@@ -13,9 +13,9 @@ class GP (Framework):
 
     # Evolution parameters:
     max_simulation_time = 30.
-    population_size = 20
+    population_size = 40
     max_depth = 5
-    terminal_set = ['E']
+    terminal_set = ['E', 'W']
     function_set = ['L', 'S']
 
     #part ranges
@@ -29,7 +29,8 @@ class GP (Framework):
 
         self.primitive_set = {'L': self.create_arm,
                               'E': self.create_endpoint,
-                              'S': self.create_split}
+                              'S': self.create_split,
+                              'W': self.create_wheel}
 
         self.creatures = []
         self.simulation_time = 0
@@ -63,16 +64,16 @@ class GP (Framework):
             shape=b2CircleShape(radius=0.2), #small
             density=1)
         self.triangle = b2FixtureDef(
-            shape=b2PolygonShape(vertices=[(0,0),(1,1),(0,1)]), #middle
+            shape=b2PolygonShape(vertices=[(0,-0.5),(1,2.2),(2,-0.5)]), #middle
             density=1)
 
         # Randomly generated obstacle shapes and distances
         obstacle_set = [self.box, self.circle, self.triangle]
         self.obstacles = []
-        for i in range(self.obstacle_count):
+        for i in np.random.uniform(-50, 1000, self.obstacle_count):
             obstacle = self.world.CreateStaticBody(
                 fixtures=random.choice(obstacle_set),
-                position=(-40 + np.int(np.random.choice(40, 1).squeeze()) * i, 0.5))
+                position=(i, 0.5))
             self.obstacles.append(obstacle)
 
         # Create initial population
@@ -125,14 +126,14 @@ class GP (Framework):
             # Randomly generated obstacle shapes and distances
             obstacle_set = [self.box, self.circle, self.triangle]
             self.obstacles = []
-            for i in range(self.obstacle_count):
+            for i in np.random.uniform(-50, 1000, self.obstacle_count):
                 obstacle = self.world.CreateStaticBody(
                     fixtures=random.choice(obstacle_set),
-                    position=(-40 + np.int(np.random.choice(40, 1).squeeze()) * i, 0.5))
+                    position=(i, 0.5))
                 self.obstacles.append(obstacle)
 
             self.generation += 1
-            best_creatures = self.select_best_creatures(self.creatures)
+            best_creatures = self.select_best_creatures(self.creatures, 4)
             best_graphs = [creature.graph for creature in best_creatures]
             new_graphs = self.evolve_creatures(best_graphs, self.population_size)
             new_population = [self.creature_from_graph(graph) for graph in new_graphs]
@@ -283,7 +284,7 @@ class GP (Framework):
     def create_random_subgraph(self, root, parent, graph):
         # Continue mutated graph from the parent of the deleted node downward
 
-        anchor_set = {'L': 1, 'E': 0, 'S': 2, 'R': 1}
+        anchor_set = {'L': 1, 'E': 0, 'S': 2, 'R': 1, 'W': 0}
         # openlist = [root] # add parent of tbmut to openlist as root node
 
         prefix = root[0]
@@ -503,6 +504,33 @@ class GP (Framework):
         return body, anchors, self.encode_part('E', angle, speed, length, graph_code)
 
 
+    def create_wheel(self, anchor, connected, graph_code, angle=0, speed=5, length=2):
+
+        body = self.world.CreateDynamicBody(
+            position=anchor,
+            angle=angle * b2_pi / 180,
+            angularDamping=10,
+            fixtures=b2FixtureDef(
+                shape=b2CircleShape(radius=0.5+length/3),
+                groupIndex=-1,
+                density=1),
+        )
+
+        # define joints
+        anchors = []
+
+        motorJoint = self.world.CreateRevoluteJoint(
+            bodyA=body,
+            bodyB=connected,
+            anchor=anchor,
+            collideConnected=False,
+            motorSpeed=speed,
+            maxMotorTorque=5000,
+            enableMotor=self.motorOn)
+
+        return body, anchors, self.encode_part('W', angle, speed, length, graph_code)
+
+
     def create_prototype(self):
         root = self.create_root()
         openlist = [root]
@@ -545,7 +573,7 @@ class Creature:
 
     def get_fitness(self):
         # return x coordinate of root as fitness value
-        return max(self.body[0].position.x, 0)
+        return max(self.body[0].position.x, 0)**2
 
     def update(self, timestep):
         self.time_alive += timestep
