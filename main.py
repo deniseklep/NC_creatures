@@ -38,9 +38,12 @@ class GP (Framework):
         self.fitnesses = []
         self.average_complexity = 0
         self.complexities = []
+        self.average_depth = 0
+        self.depths = []
 
         self.fitness_file = 'fitness.csv'
         self.complexity_file = 'complexities.csv'
+        self.depth_file = 'depths.csv'
 
         # The ground
         ground = self.world.CreateStaticBody(
@@ -82,6 +85,10 @@ class GP (Framework):
             wr = csv.writer(f)
             wr.writerow(['generation', 'average complexity'])
 
+        with open(self.depth_file, 'w', newline='') as f:
+            wr = csv.writer(f)
+            wr.writerow(['generation', 'average depth'])
+
 
     def Step(self, settings):
         super(GP, self).Step(settings)
@@ -94,6 +101,7 @@ class GP (Framework):
                 creature.update(1.0 / settings.hz)
         else:
             # Create new generation
+            print('End of generation {}'.format(self.generation))
             self.best_fitness = max([creature.get_fitness() for creature in self.creatures])
             self.fitnesses.append(self.best_fitness)
             self.write_to_csv(self.fitness_file, self.best_fitness)
@@ -103,9 +111,13 @@ class GP (Framework):
             self.complexities.append(self.average_complexity)
             self.write_to_csv(self.complexity_file, self.average_complexity)
             print('Average complexity: {}'.format(self.average_complexity))
+            self.average_depth = sum([max([len(part.split("_")[-1]) for part in creature.graph.keys()]) for creature in self.creatures])/self.population_size
+            self.depths.append(self.average_complexity)
+            self.write_to_csv(self.depth_file, self.average_depth)
+            print('Average depth: {}'.format(self.average_depth))
 
             self.generation += 1
-            best_creatures = self.select_best_creatures(self.creatures)
+            best_creatures = self.select_best_creatures(self.creatures, 5)
             best_graphs = [creature.graph for creature in best_creatures]
             new_graphs = self.evolve_creatures(best_graphs, self.population_size)
             new_population = [self.creature_from_graph(graph) for graph in new_graphs]
