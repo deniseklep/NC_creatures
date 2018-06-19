@@ -13,8 +13,8 @@ class GP (Framework):
 
     # Evolution parameters:
     max_simulation_time = 30.
-    population_size = 40
-    max_depth = 5
+    population_size = 30
+    max_depth = 4
     terminal_set = ['E', 'W']
     function_set = ['L', 'S']
 
@@ -133,7 +133,7 @@ class GP (Framework):
                 self.obstacles.append(obstacle)
 
             self.generation += 1
-            best_creatures = self.select_best_creatures(self.creatures, 4)
+            best_creatures = self.select_best_creatures(self.creatures, 2)
             best_graphs = [creature.graph for creature in best_creatures]
             new_graphs = self.evolve_creatures(best_graphs, self.population_size)
             new_population = [self.creature_from_graph(graph) for graph in new_graphs]
@@ -195,23 +195,15 @@ class GP (Framework):
         for i, g in enumerate(new_graphs):
             chance = np.random.random()
             if chance < p[0]:
-                #print('Mutating graph')
-                #print('graph before: {}'.format(g))
                 tbmut = random.choice([x for x in list(g.keys()) if not x.startswith('R')])
-                #print('to be mutated: {}'.format(tbmut))
                 tbdel = []
                 self.find_child(g, tbmut, tbdel)
-                #print('to be deleted: {}'.format(tbdel))
                 parent = self.find_parent(g, tbmut)
-                #print('parent: {}'.format(parent))
                 g = self.delete_connections(g, tbmut, tbdel)
-                #print('graph after: {}'.format(g))
                 g = self.create_random_subgraph(tbmut, parent, g)
-                #print('mutated graph: {}'.format(g))
                 new_graphs[i] = g
 
             elif chance < p[0]+p[1]:
-                #print('Mutating parameters')
                 tbmut = random.choice([x for x in list(g.keys()) if not x.startswith('R')])
                 split = tbmut.split('_')
                 part = self.decode_part(tbmut)
@@ -224,7 +216,6 @@ class GP (Framework):
                     g[k] = [new_tbmut if i == tbmut else i for i in v]
 
             elif chance < p[0]+p[1]+p[2]:
-                #print('Crossover')
                 og = g.copy()
                 tbcross1 = random.choice([x for x in list(g.keys()) if not x.startswith('R')])
                 children1 = []
@@ -252,9 +243,8 @@ class GP (Framework):
                     new_graphs[j] = og2
 
             else:
-                #print('No')
                 pass
-        #print(len(new_graphs))
+
         return new_graphs
 
 
@@ -285,7 +275,6 @@ class GP (Framework):
         # Continue mutated graph from the parent of the deleted node downward
 
         anchor_set = {'L': 1, 'E': 0, 'S': 2, 'R': 1, 'W': 0}
-        # openlist = [root] # add parent of tbmut to openlist as root node
 
         prefix = root[0]
         angle = np.random.randint(0, 360)
@@ -372,6 +361,7 @@ class GP (Framework):
         # define joints
         anchors = []
         anchors.append(self.offset)
+        anchors.append(self.offset)
 
         if not_create:
             self.world.DestroyBody(body)
@@ -444,8 +434,8 @@ class GP (Framework):
         )
 
         #define joints
-        rad1 = (angle+80) * b2_pi / 180
-        rad2 = (angle+100) * b2_pi / 180
+        rad1 = (angle+70) * b2_pi / 180
+        rad2 = (angle+110) * b2_pi / 180
         a1 = b2Vec2(anchor.x + np.cos(rad1) * length, anchor.y + np.sin(rad1) * length)
         a2 = b2Vec2(anchor.x + np.cos(rad2) * length, anchor.y + np.sin(rad2) * length)
         anchors = [a1, a2]
