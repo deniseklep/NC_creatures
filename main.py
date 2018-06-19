@@ -13,7 +13,7 @@ class GP (Framework):
 
     # Evolution parameters:
     max_simulation_time = 30.
-    population_size = 30
+    population_size = 40
     max_depth = 4
     terminal_set = ['E', 'W']
     function_set = ['L', 'S']
@@ -274,7 +274,7 @@ class GP (Framework):
     def create_random_subgraph(self, root, parent, graph):
         # Continue mutated graph from the parent of the deleted node downward
 
-        anchor_set = {'L': 1, 'E': 0, 'S': 2, 'R': 1, 'W': 0}
+        anchor_set = {'L': 1, 'E': 0, 'S': 2, 'R': 2, 'W': 0}
 
         prefix = root[0]
         angle = np.random.randint(0, 360)
@@ -349,11 +349,11 @@ class GP (Framework):
         return self.primitive_set[split[0]], int(split[1]), int(split[2]), int(split[3]), split[4]
 
 
-    def create_root(self, not_create=False):
+    def create_root(self):
         body = self.world.CreateDynamicBody(
             position=self.offset,
             fixtures=b2FixtureDef(
-                shape=b2CircleShape(radius=0.1),
+                shape=b2CircleShape(radius=0.2),
                 groupIndex=-1,
                 density=1),
         )
@@ -361,15 +361,12 @@ class GP (Framework):
         # define joints
         anchors = []
         anchors.append(self.offset)
-        anchors.append(self.offset)
-
-        if not_create:
-            self.world.DestroyBody(body)
+        anchors.append(b2Vec2(self.offset.x, self.offset.y + 0.1))
 
         return body, anchors, 'R_0'
 
 
-    def create_arm(self, anchor, connected, graph_code, angle=45, speed=5, length=4, not_create=False):
+    def create_arm(self, anchor, connected, graph_code, angle=45, speed=5, length=4):
 
         #define body
         p1 = b2Vec2(0, -1)
@@ -405,13 +402,10 @@ class GP (Framework):
             maxMotorTorque=1000,
             enableMotor=self.motorOn)
 
-        if not_create:
-            self.world.DestroyBody(body)
-
         return body, anchors, self.encode_part('L', angle, speed, length, graph_code)
 
 
-    def create_split(self, anchor, connected, graph_code, angle=45, speed=5, length=4, not_create=False):
+    def create_split(self, anchor, connected, graph_code, angle=45, speed=5, length=4):
 
         #define body
         p1 = b2Vec2(0, -1)
@@ -449,13 +443,10 @@ class GP (Framework):
             maxMotorTorque=1000,
             enableMotor=self.motorOn)
 
-        if not_create:
-            self.world.DestroyBody(body)
-
         return body, anchors, self.encode_part('S', angle, speed, length, graph_code)
 
 
-    def create_endpoint(self, anchor, connected, graph_code, angle=0, speed=5, length=2, not_create=False):
+    def create_endpoint(self, anchor, connected, graph_code, angle=0, speed=5, length=2):
         # define body
         p1 = b2Vec2(0, -1)
         p2 = b2Vec2(-1, 0)
@@ -487,9 +478,6 @@ class GP (Framework):
             motorSpeed=speed,
             maxMotorTorque=1000,
             enableMotor=self.motorOn)
-
-        if not_create:
-            self.world.DestroyBody(body)
 
         return body, anchors, self.encode_part('E', angle, speed, length, graph_code)
 
