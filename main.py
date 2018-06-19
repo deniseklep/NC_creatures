@@ -4,6 +4,7 @@ from Box2D import (b2CircleShape, b2EdgeShape, b2FixtureDef, b2PolygonShape,
 import random
 import numpy as np
 import csv
+import sys
 
 class GP (Framework):
     name = "Genetic Programming Creatures"
@@ -119,6 +120,10 @@ class GP (Framework):
             self.write_to_csv(self.depth_file, self.average_depth)
             print('Average depth: {}'.format(self.average_depth))
 
+            # terminate program after 30 generations
+            if self.generation >= 30:
+                sys.exit()
+
             # Destroy previous obstacles
             for i in self.obstacles:
                 self.world.DestroyBody(i)
@@ -185,7 +190,7 @@ class GP (Framework):
             self.find_child(g, m, tbdel)
 
 
-    def evolve_creatures(self, graphs, n=10, p=[0.10, 0.15, 0.50 ,0.25]):
+    def evolve_creatures(self, graphs, n=10, p=[0.2, 0.2, 0.3 ,0.3]):
         # copy graphs until there are n
         new_graphs = []
         for i in range(n):

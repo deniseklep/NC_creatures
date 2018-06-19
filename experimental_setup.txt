@@ -1,14 +1,14 @@
-max_generations: 30
-obstacle_count: 0 - 200 - 400 - 600
-population_size: 10 - 20 - 30 - 40 
-nr_of_parents: 2 - 10% v population size - 50% v population size
-max_depth: 2 - 4 - 6 - 8
-probabilities: 	[0.25, 0.25, 0.25, 0.25]
+obstacle_count: 0 - 200 - 400 - 600 (denise)
+population_size: 10 - 20 - 30 - 40 (sven)
+nr_of_parents: 2 - 10% v population size - 50% v population size (denise)
+max_depth: 2 - 4 - 6 - 8 (sven)
+probabilities: 	[0.25, 0.25, 0.25, 0.25] (denise)
 		[0.2, 0.2, 0.4, 0.2]
 		[0.1, 0.15, 0.5, 0.25]
 		[0.01, 0.01, 0.9, 0.08]
 
 defaults: 
+max_generations: 30
 obstacle_count: 400
 population_size: 30
 nr_of_parents: 2
