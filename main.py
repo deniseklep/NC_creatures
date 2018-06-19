@@ -120,10 +120,6 @@ class GP (Framework):
             self.write_to_csv(self.depth_file, self.average_depth)
             print('Average depth: {}'.format(self.average_depth))
 
-            # terminate program after 30 generations
-            if self.generation >= 30:
-                sys.exit()
-
             # Destroy previous obstacles
             for i in self.obstacles:
                 self.world.DestroyBody(i)
