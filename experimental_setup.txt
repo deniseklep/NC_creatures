@@ -1,11 +1,10 @@
-obstacle_count: 0 - 200 - 400 - 600 (denise)
-population_size: 10 - 20 - 30 - 40 (sven)
-nr_of_parents: 2 - 10% v population size - 50% v population size (denise)
-max_depth: 2 - 4 - 6 - 8 (sven)
-probabilities: 	[0.25, 0.25, 0.25, 0.25] (denise)
+obstacle_count: 0 - 200 - 400 - 600 
+population_size: 10 - 20 - 30 
+nr_of_parents: 2 - 10% v population size - 50% v population size 
+max_depth: 2 - 4 - 6 - 8 
+probabilities: 	[0.25, 0.25, 0.25, 0.25] 
 		[0.2, 0.2, 0.4, 0.2]
 		[0.1, 0.15, 0.5, 0.25]
-		[0.01, 0.01, 0.9, 0.08]
 
 defaults: 
 max_generations: 30
@@ -16,3 +15,10 @@ max_depth: 4
 probabilities: [0.1, 0.15, 0.5, 0.25]
 
 end experiment: test set of best parameters together
+
+Best:
+population_size: 20 
+nr_of_parents: 2 
+max_depth: 8
+obstacles: 600
+probabilities: [0.2, 0.2, 0.4, 0.2]
